@@ -9,11 +9,11 @@ import SwiftKeychainWrapper
 @objc(SecureStoragePlugin)
 public class SecureStoragePlugin: CAPPlugin {
     var keychainwrapper: KeychainWrapper = KeychainWrapper.init(serviceName: "cap_sec")
-    
+
     @objc func set(_ call: CAPPluginCall) {
         let key = call.getString("key") ?? ""
         let value = call.getString("value") ?? ""
-        let saveSuccessful: Bool = keychainwrapper.set(value, forKey: key, withAccessibility: .afterFirstUnlock)
+        let saveSuccessful: Bool = keychainwrapper.set(value, forKey: key, withAccessibility: .afterFirstUnlockThisDeviceOnly)
         if(saveSuccessful) {
             call.resolve([
                 "value": saveSuccessful
@@ -23,12 +23,12 @@ public class SecureStoragePlugin: CAPPlugin {
             call.reject("error")
         }
     }
-    
+
     @objc func get(_ call: CAPPluginCall) {
         let key = call.getString("key") ?? ""
         let hasValueDedicated = keychainwrapper.hasValue(forKey: key)
         let hasValueStandard = KeychainWrapper.standard.hasValue(forKey: key)
-        
+
         // copy standard value to dedicated and remove standard key
         if (hasValueStandard && !hasValueDedicated) {
             let syncValueSuccessful: Bool = keychainwrapper.set(
@@ -41,7 +41,7 @@ public class SecureStoragePlugin: CAPPlugin {
                 call.reject("error")
             }
         }
-        
+
         if(hasValueDedicated || hasValueStandard) {
             call.resolve([
                 "value": keychainwrapper.string(forKey: key) ?? ""
@@ -51,19 +51,19 @@ public class SecureStoragePlugin: CAPPlugin {
             call.reject("Item with given key does not exist")
         }
     }
-    
+
     @objc func keys(_ call: CAPPluginCall) {
         let keys = keychainwrapper.allKeys();
         call.resolve([
             "value": Array(keys)
         ])
     }
-    
+
     @objc func remove(_ call: CAPPluginCall) {
         let key = call.getString("key") ?? ""
         let hasValueDedicated = keychainwrapper.hasValue(forKey: key)
         let hasValueStandard = KeychainWrapper.standard.hasValue(forKey: key)
-        
+
         if(hasValueDedicated || hasValueStandard) {
             KeychainWrapper.standard.removeObject(forKey: key);
             let removeDedicatedSuccessful: Bool = keychainwrapper.removeObject(forKey: key)
@@ -80,17 +80,17 @@ public class SecureStoragePlugin: CAPPlugin {
             call.reject("Item with given key does not exist")
         }
     }
-    
+
     @objc func clear(_ call: CAPPluginCall) {
         let keys = keychainwrapper.allKeys();
         // cleanup standard keychain wrapper keys
-        
+
         if(keys.count == 0) {
             call.resolve([
                 "value": true
             ])
         }
-        else {            
+        else {
             for key in keys {
                 let hasValueStandard = KeychainWrapper.standard.hasValue(forKey: key)
                 if (hasValueStandard) {
@@ -100,7 +100,7 @@ public class SecureStoragePlugin: CAPPlugin {
                     }
                 }
             }
-            
+
             let clearSuccessful: Bool = keychainwrapper.removeAllKeys()
             if(clearSuccessful) {
                 call.resolve([
@@ -112,7 +112,7 @@ public class SecureStoragePlugin: CAPPlugin {
             }
         }
     }
-    
+
     @objc func getPlatform(_ call: CAPPluginCall) {
         call.resolve([
             "value": "ios"
